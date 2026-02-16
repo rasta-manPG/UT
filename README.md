@@ -7,4 +7,6 @@ The bars are set in the right position of every point lead by text of procentage
 !_____! !_! 59%
   NOOK
 The text of precentage "%" is dinamically going up and down in relation with the team colour possesion
+The mutator works for HudScale=0.400000
+If you have different scale Hud will not be displayed corectly
 Made by Rasta-man 
