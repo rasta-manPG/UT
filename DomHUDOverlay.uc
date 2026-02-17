@@ -95,24 +95,33 @@ function Tick(float DeltaTime)
 
 simulated function PostRender(Canvas Canvas)
 {
-    local float TotalTime, RedRatio;
-    local float BarWidth, BarHeight, BarX, ScaleRatio, CurrentHUDScale;
-    local int i;
-    local float CurrentPosY; 
+    // Toate variabilele de dimensiune si pozitie TREBUIE sa fie float
+    local float TotalTime, RedRatio, BarWidth, BarHeight, BarX, CurrentPosY;
+    local float ScaleRatio, CurrentHUDScale, ResScale;
+    local int i; // Singura variabila int ramane indexul i
     local string RedPct, BluePct;
     local ChallengeHUD CHUD;
 
     if (!bShowDOMHUD || Canvas == None) return;
 
-    // --- LOGICA DE SCALARE ---
+    // --- LOGICA DE SCALARE COMBINATA ---
     CHUD = ChallengeHUD(Canvas.Viewport.Actor.myHUD);
     if (CHUD != None)
         CurrentHUDScale = CHUD.HUDScale;
     else
         CurrentHUDScale = 1.0;
 
-    ScaleRatio = CurrentHUDScale / 0.4; // 0.4 este baza ta originala
-    // -------------------------
+    ResScale = Canvas.ClipX / 1920.0;
+    ScaleRatio = (CurrentHUDScale / 0.4) * ResScale;
+
+    // Calculam cat de mare e ecranul fata de 1920px (baza ta)
+    ResScale = Canvas.ClipX / 1920.0;
+
+    // Combinam ambele scale-uri:
+    // (CurrentHUDScale / 0.4) asigura ca la HUD Scale 0.4 avem marimea originala
+    // * ResScale asigura ca la 1920x1080 avem marimea originala
+    ScaleRatio = (CurrentHUDScale / 0.4) * ResScale;
+    // -----------------------------------
 
     Canvas.Style = 1; 
     Canvas.bNoSmooth = True;
@@ -127,16 +136,17 @@ simulated function PostRender(Canvas Canvas)
 
     if (WhiteTex == None) WhiteTex = Texture'Engine.WhiteTexture';
 
-    // Aplicam ScaleRatio pe dimensiunile de baza
+    // Toate dimensiunile si pozitiile folosesc acum ScaleRatio combinat
     BarWidth = 7 * ScaleRatio; 
     BarHeight = 33 * ScaleRatio; 
     BarX = 45 * ScaleRatio;
     
+    // Fontul se scaleaza oricum nativ prin Canvas.ClipX in functia de mai jos
     Canvas.Font = MyFonts.GetStaticSmallFont(Canvas.ClipX);
 
     for (i = 0; i < NumPoints; i++)
     {
-        // Scalam si pozitiile verticale (Y)
+        // Pozitionarea Y fata de marginea de jos (ClipY) scalata
         if (i == 0) CurrentPosY = Canvas.ClipY - (397 * ScaleRatio); 
         else if (i == 1) CurrentPosY = Canvas.ClipY - (313 * ScaleRatio); 
         else if (i == 2) CurrentPosY = Canvas.ClipY - (229 * ScaleRatio); 
@@ -144,10 +154,10 @@ simulated function PostRender(Canvas Canvas)
 
         TotalTime = PointStats[i].RedTime + PointStats[i].BlueTime;
         
-        // Bordura
-        Canvas.SetPos(BarX - 1, CurrentPosY - 1);
+        // Desenare Bordura (Grosime 2px scalata vizual)
+        Canvas.SetPos(BarX - ScaleRatio, CurrentPosY - ScaleRatio);
         Canvas.DrawColor.R = 255; Canvas.DrawColor.G = 255; Canvas.DrawColor.B = 255;
-        Canvas.DrawRect(WhiteTex, BarWidth + 2, BarHeight + 2);
+        Canvas.DrawRect(WhiteTex, BarWidth + (2 * ScaleRatio), BarHeight + (2 * ScaleRatio));
         
         // Fundal Bar
         Canvas.SetPos(BarX, CurrentPosY);
@@ -160,17 +170,16 @@ simulated function PostRender(Canvas Canvas)
             BluePct = int((1.0 - RedRatio) * 100) $ "%";
             RedPct = int(RedRatio * 100) $ "%";
 
-            // Echipa Albastra (Cyan)
+            // Desenare segmente echipe
             Canvas.SetPos(BarX, CurrentPosY);
             Canvas.DrawColor.R = 0; Canvas.DrawColor.G = 255; Canvas.DrawColor.B = 255;
             Canvas.DrawRect(WhiteTex, BarWidth, BarHeight * (1.0 - RedRatio));
 
-            // Echipa Rosie
             Canvas.SetPos(BarX, CurrentPosY + (BarHeight * (1.0 - RedRatio)));
             Canvas.DrawColor.R = 255; Canvas.DrawColor.G = 0; Canvas.DrawColor.B = 0;
             Canvas.DrawRect(WhiteTex, BarWidth, BarHeight * RedRatio);
 
-            // Text Procente (Pozitionat relativ la ScaleRatio)
+            // Textul se muta si el in functie de noile dimensiuni
             Canvas.DrawColor.R = 0; Canvas.DrawColor.G = 255; Canvas.DrawColor.B = 255;
             Canvas.SetPos(BarX + BarWidth + (5 * ScaleRatio), CurrentPosY + (BarHeight * (1.0 - RedRatio)) / 2 - (5 * ScaleRatio)); 
             Canvas.DrawText(BluePct, false);
